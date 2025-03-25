@@ -9,3 +9,146 @@ df = pd.read_excel('/content/Pretrial Supervisions Test Dataset Final.xlsx', she
 
 # Display rows (For the dataset structure)
 df.head()
+
+
+# STEP-2 : DATA CLEANING
+#Checking Initial Unique Values for Issues
+print("Before Cleaning Risk Level:", df['riskLevel'].unique())
+print("Before Cleaning First Appointment:", df['firstApptAttendance'].unique())
+
+#riskLevel
+df['riskLevel'] = df['riskLevel'].astype(str).str.strip().str.upper()
+risk_mapping = {'PRL1': 1, 'PRL2': 2, 'PRL3': 3, 'PRL4': 4, 'PRL5': 5, 'ROR': np.nan, 'NONE': np.nan, 'NAN': np.nan}
+df['riskLevel'] = df['riskLevel'].map(risk_mapping)
+
+#firstApptAttendance
+attendance_mapping = {'First Appointment Completed': 1, 'First Appointment Not Completed': 0}
+df['firstApptAttendance'] = df['firstApptAttendance'].map(attendance_mapping)
+
+#Date_formatting
+df['startDate'] = pd.to_datetime(df['startDate'])
+df['endDate'] = pd.to_datetime(df['endDate'])
+
+#Column for Supervision Duration (Days)
+df['supervisionDuration'] = (df['endDate'] - df['startDate']).dt.days
+
+#Verifying the Dataset post cleaning
+print("After Cleaning Risk Level:", df['riskLevel'].unique())
+print("After Cleaning First Appointment:", df['firstApptAttendance'].unique())
+
+# STEP-3 : Exploratory Data Analysis (EDA)
+# Taking Statistics Summary
+summary_stats = df.describe().T[['count', 'mean', 'min', '25%', '50%', '75%', 'max', 'std']]
+display(summary_stats.style.set_caption("Summary Statistics").set_table_styles(
+    [{'selector': 'caption', 'props': [('font-size', '16px'), ('font-weight', 'bold')]}]
+))
+
+# Closure Type Count Table
+closure_type_counts = df['closureType'].value_counts().reset_index()
+closure_type_counts.columns = ['Closure Type', 'Count']
+display(closure_type_counts.style.set_caption("Closure Type Counts").set_table_styles(
+    [{'selector': 'caption', 'props': [('font-size', '16px'), ('font-weight', 'bold')]}]
+))
+
+# Risk Level Count Table
+risk_level_counts = df['riskLevel'].value_counts().reset_index()
+risk_level_counts.columns = ['Risk Level', 'Count']
+display(risk_level_counts.style.set_caption("Risk Level Counts").set_table_styles(
+    [{'selector': 'caption', 'props': [('font-size', '16px'), ('font-weight', 'bold')]}]
+))
+
+# First Appointment Attendance Count Table
+appt_attendance_counts = df['firstApptAttendance'].value_counts().reset_index()
+appt_attendance_counts.columns = ['First Appointment Attendance', 'Count']
+display(appt_attendance_counts.style.set_caption("First Appointment Attendance Counts").set_table_styles(
+    [{'selector': 'caption', 'props': [('font-size', '16px'), ('font-weight', 'bold')]}]
+))
+
+# Data Vizualization
+# Risk Level Distribution Vizualization
+fig, ax = plt.subplots(figsize=(8, 5))
+df['riskLevel'].dropna().astype(int).value_counts().sort_index().plot(kind='bar', color='teal', ax=ax)
+ax.set_title("Risk Level Distribution")
+ax.set_xlabel("Risk Level (1 = Lowest, 5 = Highest)")
+ax.set_ylabel("Count")
+ax.set_xticks(range(1, 6))
+plt.show()
+
+fig = plt.figure(figsize=(8, 5))
+ax = fig.add_subplot(111, projection='3d')
+risk_counts = df['riskLevel'].dropna().astype(int).value_counts().sort_index()
+xpos = np.arange(len(risk_counts))
+ax.bar3d(xpos, np.zeros(len(risk_counts)), np.zeros(len(risk_counts)), 0.5, 0.5, risk_counts.values, color='teal')
+ax.set_xticks(xpos)
+ax.set_xticklabels(risk_counts.index)
+ax.set_title('3D Risk Level Distribution')
+plt.show()
+
+# Supervision Outcomes Vizualization
+fig, ax = plt.subplots(figsize=(8, 5))
+df['closureType'].value_counts().plot(kind='bar', color='skyblue', ax=ax)
+ax.set_title(" Supervision Outcome Distribution")
+ax.set_xlabel("Outcome (Successful / Unsuccessful)")
+ax.set_ylabel("Count")
+plt.xticks(rotation=45)
+plt.show()
+
+fig = plt.figure(figsize=(8, 5))
+ax = fig.add_subplot(111, projection='3d')
+closure_counts = df['closureType'].value_counts()
+xpos = np.arange(len(closure_counts))
+ax.bar3d(xpos, np.zeros(len(closure_counts)), np.zeros(len(closure_counts)), 0.5, 0.5, closure_counts.values, color='skyblue')
+ax.set_xticks(xpos)
+ax.set_xticklabels(closure_counts.index)
+ax.set_title('3D Supervision Outcome Distribution')
+plt.show()
+
+fig, ax = plt.subplots(figsize=(8, 5))
+sns.boxplot(x='closureType', y='riskLevel', data=df, palette='coolwarm', ax=ax)
+ax.set_title("Risk Level vs Supervision Outcome")
+ax.set_xlabel("Supervision Outcome")
+ax.set_ylabel("Risk Level")
+plt.show()
+
+fig = plt.figure(figsize=(8, 5))
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(df['riskLevel'], df['supervisionDuration'], df['firstApptAttendance'], c=df['riskLevel'], cmap='coolwarm')
+ax.set_xlabel('Risk Level')
+ax.set_ylabel('Supervision Duration (Days)')
+ax.set_zlabel('First Appt Attendance')
+ax.set_title('3D Risk Level vs Supervision Outcome')
+plt.show()
+fig, ax = plt.subplots(figsize=(8, 5))
+sns.barplot(x='closureType', y='firstApptAttendance', data=df, palette='viridis', ax=ax)
+ax.set_title("First Appointment Attendance vs Supervision Outcome")
+ax.set_xlabel("Supervision Outcome")
+ax.set_ylabel("Average Attendance Rate")
+plt.show()
+
+fig = plt.figure(figsize=(8, 5))
+ax = fig.add_subplot(111, projection='3d')
+attendance_counts = df.groupby('closureType')['firstApptAttendance'].mean().reset_index()
+xpos = np.arange(len(attendance_counts))
+ax.bar3d(xpos, np.zeros(len(attendance_counts)), np.zeros(len(attendance_counts)), 0.5, 0.5, attendance_counts['firstApptAttendance'], color='purple')
+ax.set_xticks(xpos)
+ax.set_xticklabels(attendance_counts['closureType'])
+ax.set_title("3D First Appointment Attendance vs Supervision Outcome")
+plt.show()
+
+fig, ax = plt.subplots(figsize=(8, 5))
+sns.histplot(df['supervisionDuration'].dropna(), bins=30, kde=True, color="purple", ax=ax)
+ax.set_title("Distribution of Supervision Duration (Days)")
+ax.set_xlabel("Duration (Days)")
+ax.set_ylabel("Frequency")
+plt.show()
+
+fig = plt.figure(figsize=(8, 5))
+ax = fig.add_subplot(111, projection='3d')
+duration_bins = np.histogram(df['supervisionDuration'].dropna(), bins=30)
+xpos = np.arange(len(duration_bins[0]))
+ax.bar3d(xpos, np.zeros(len(duration_bins[0])), np.zeros(len(duration_bins[0])), 0.5, 0.5, duration_bins[0], color='purple')
+ax.set_title("3D Distribution of Supervision Duration (Days)")
+plt.show()
+
+df.to_csv("/content/Pretrial_Cleaned.csv", index=False)
+print("\n Cleaned dataset saved as 'Pretrial_Cleaned.csv' for use in reports or presentations.")
